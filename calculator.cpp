@@ -1,11 +1,9 @@
-
 #include "mbed.h"
-#include <cstdlib>
-#include <string>
+#include <cstdio>
 
+static BufferedSerial calculator_service(D1, D0, 9600); //D1 = UART6 TX //D0 == UART6 RX
+static BufferedSerial operand_tester(D53, D52, 9600); //D53 = UART2 TX //D52 == UART2 RX
 
-static BufferedSerial calculator_service(USBTX, USBRX); //D1 = UART6 TX //D0 == UART6 RX
-static BufferedSerial operand_tester(D53, D52); //D53 = UART2 TX //D52 == UART2 RX
 
 void serial_setup()
 {
@@ -16,87 +14,125 @@ void serial_setup()
     operand_tester.set_format(8,BufferedSerial::None,1); //(bits,parity,stop bit)  
 }
 
+void clean_file_buffer(FILE *fp) //function to hopefully clear scanf buffer, doesnt really work right now
+{
+    int c;
+    while((c = fgetc(fp)) != '\n' && c!=EOF);
+}
+
 int main()
 {
-char const* num1buff;
-char const* num2buff;
-char const* funcbuff;
-float num1;
-float num2;
-char func[0];
-int caseswitch;
-int check = 0;
-float result;
-char num1C[7];
-char num2C[7];
+    //all needed variables
+    char num1[30];
+    int x;
 
-char msg[] = "\nCaculator Module";
-calculator_service.write(msg, strlen(msg));
-while(1) 
+    char num2[30];
+    int y;
+
+    char op[2];
+    int check = 0;
+
+    //For use with the initial read input
+    char readNum1;
+    char readNum2;
+    char readOperator;
+
+    char msg;
+
+    //For use with the calculator service
+    char passedNum1;
+    char passedNum2;
+    char passedOperator;
+
+while(1)
 {
+    printf("\nCaculator Module:");
 
-    strcpy(msg , "\nenter first number: ");
-    calculator_service.write(msg, strlen(msg));
-    calculator_service.read(&num1buff, 6);   
-    wait_us(3000);
-    num1 = std::atof(num1buff);
+    //Begine collecting inputs of first serial line
+    printf("\nEnter first number: ");
+    scanf("%s" , num1);
+    readNum1 = calculator_service.read(num1, strlen(num1));
+    clean_file_buffer(stdin);
 
-    strcpy(msg , "\nenter function (a  (add), s (subtract), m (multiply), d(divide)): ");
-    calculator_service.write(msg, strlen(msg));
-    while (check == 0)
-    {
-        calculator_service.read(&funcbuff, 1);
-        wait_us(3000);
-        std::strcpy(func, funcbuff);
-        strcpy(msg , func);
-        calculator_service.write(msg, strlen(msg));
-        wait_us(3000);
-        if (func[0] == 'a')
-            check = 1;  
-        if (func[0] == 's')
-            check = 2;
-        if (func[0] == 'm')
-            check = 3;
-        if (func[0] == '/')
-            check = 4; 
-        else
-        {
-         strcpy(msg , "\ninvalid input, try different entry: ");
-         calculator_service.write(msg, strlen(msg));
+    printf ("\nEnter an operator(+, -, *, /):\n "); 
+    scanf ("%c", op); // take an operator  
+    readOperator = calculator_service.read(op, strlen(op));
+   
+    printf("Enter second operand: ");
+    scanf("%s" , num2);
+    readNum2 = calculator_service.read(num1, strlen(num1));
+    clean_file_buffer(stdin);
+
+    //Convert to the prefferred int/float:
+
+    x = atof(&readNum1); //for input 1
+    if (floor(x) == x)
+        {x = atoi(&readNum1);
+        readNum1 = printf("%i", x); //convert to int
         }
+    else 
+    {
+    readNum1 = printf("%d", x); //keep as float
     }
 
-    strcpy(msg , "\nenter second number: ");
-    calculator_service.write(msg, strlen(msg));
-    calculator_service.read(&num2buff, 6);
-    wait_us(3000);
-    num2 = std::atof(num2buff);
-    
-    switch(check) {
-        case 1:
-            strcpy(msg , "\nsolution: ");
-            calculator_service.write(msg, strlen(msg));
+    y = atof(&readNum2); //for input 2
+    if (floor(y) == y)
+        {y = atoi(&readNum2);
+        readNum2 = printf("%i", y);
+        }
+    else 
+    {
+    readNum2 = printf("%d", 2);
+    }
+
+    //Pass through everything to the calculation serial line
+    msg = calculator_service.write(&readNum1, strlen(&readNum1));
+    passedNum1 = operand_tester.read(&msg, strlen(&msg));
+
+    msg = calculator_service.write(&readNum2, strlen(&readNum2));
+    passedNum2 = operand_tester.read(&msg, strlen(&msg));
+
+    msg = calculator_service.write(&readNum2, strlen(&readNum2));
+    passedOperator = operand_tester.read(&msg, strlen(&msg));
+
+    x = atof(&passedNum1);
+    y = atof(&passedNum2);
+
+    //Check for correct operation
+    switch(passedOperator) 
+    {
+        case '+' : check = 1;
             break;
-        case 2:
-            strcpy(msg , "\nsolution: ");
-            calculator_service.write(msg, strlen(msg));
+        case '-' : check = 2;
             break;
-        case 3:
-            strcpy(msg , "\nsolution: ");
-            calculator_service.write(msg, strlen(msg));
+        case '*' : check = 3;
             break;
-        case 4:
-            if (num2 !=0)
+        case '/' : check = 4;
+            break;
+        default : printf("Error: invalid operation detected\n");
+    }
+
+    //Run calculation
+    switch(check)
+    {
+        case '1':
+            printf("num1+num2=%d\n" , x+y);
+            break;
+        case '2':
+            printf("num1-num2=%d\n" ,x-y);
+            break;
+        case '3':
+            printf("num1*num2=%d\n" ,x*y);
+            break;
+        case '4':
+            if (y !=0)
             {
-                strcpy(msg , "\nsolution: ");
-                calculator_service.write(msg, strlen(msg));
+                printf("num1/num2=%d\n" ,x/y);
             }
             else
             printf("division by 0 error\n");
             break;
-        default:
-             printf("invalid function\n");
-             break; 
-        }
+    }       
+    printf("\nRestarting Calculator\n");
 }
 }
