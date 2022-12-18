@@ -56,13 +56,6 @@ int main()
 
 void buttonselect()
 {
-    button.rise(&buttonselect);
-    if (selectm != select)
-    {
-        printf("display changed, case: %d\n", select);
-        selectm = select;
-        ThisThread::sleep_for(BLINKING_RATE);
-    }
     select = select + 1;
     if(select == 4)
         select = 0;
@@ -94,7 +87,7 @@ void display()
         ThisThread::sleep_for(BLINKING_RATE);
     }
     printf("display running\n");
-    lcd.locate(0, 0); //set cursor row 0, column 0
+    lcd.locate(0, 0); //set cursor row 0, column 0, doesnt really work that well
     switch(select)
     {
         case 0 :
@@ -127,4 +120,5 @@ void iot()
         ThisThread::sleep_for(BLINKING_RATE);
     }
     printf("iot running\n");
+     
 }
