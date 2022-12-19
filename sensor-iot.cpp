@@ -9,7 +9,7 @@
 #define BLINKING_RATE     500ms
 
 EthernetInterface eth0;
-char ip[] ="192.168.2.101";
+char ip[] ="192.168.2.102";
 char mask[]= "255.255.255.0";
 char gateway[] = "192.168.2.1";
 
@@ -155,16 +155,13 @@ void iot()
     eth0.set_network( SocketAddress(ip), SocketAddress(mask), SocketAddress(gateway));
     eth0.connect();
 
-    HttpRequest* post_req = new HttpRequest(&eth0, HTTP_POST, "http://192.168.2.101/",NULL);
+    HttpRequest* post_req = new HttpRequest(&eth0, HTTP_POST, "http://192.168.2.101/",NULL); //some kind of issue here
     post_req->set_header("Content-Type", "text/xml");
-    const char body[] = "{\"hello\":\"world\"}"; //i cant figure this out
+    const char body[] = "{\"hello\":\"world\"}"; //i cant figure out how to post a char through httpresponse
     HttpResponse* post_res = post_req->send(body, strlen(body));
 
 //printf causes memory errors:
     //printf("status is %d - %s\n", response->get_status_code(), response->get_status_message().c_str());
     //printf("body is:\n%s\n", response->get_body_as_string().c_str());
-    
     delete post_req;
-    eth0.disconnect();
 }
-
