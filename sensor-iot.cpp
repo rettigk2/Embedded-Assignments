@@ -155,17 +155,15 @@ void iot()
     eth0.set_network( SocketAddress(ip), SocketAddress(mask), SocketAddress(gateway));
     eth0.connect();
 
-    HttpRequest* request = new HttpRequest(&eth0, HTTP_GET, "http://192.168.2.101",NULL);
-    request->set_header("Content-Type", "text/xml");
-    HttpResponse* response = request->send();
-    //HttpResponse* response = request->send(body, strlen(body));
-    
-    // if response is NULL, check response->get_error()
+    HttpRequest* post_req = new HttpRequest(&eth0, HTTP_POST, "http://192.168.2.101/",NULL);
+    post_req->set_header("Content-Type", "text/xml");
+    const char body[] = "{\"hello\":\"world\"}"; //i cant figure this out
+    HttpResponse* post_res = post_req->send(body, strlen(body));
 
 //printf causes memory errors:
     //printf("status is %d - %s\n", response->get_status_code(), response->get_status_message().c_str());
     //printf("body is:\n%s\n", response->get_body_as_string().c_str());
     
-    delete request;
+    delete post_req;
 }
 
