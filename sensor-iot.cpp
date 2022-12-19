@@ -8,7 +8,6 @@
 
 #define BLINKING_RATE     500ms
 
-
 EthernetInterface eth0;
 char ip[] ="192.168.2.100";
 char mask[]= "255.255.255.0";
@@ -32,7 +31,6 @@ float pres = 0;
 float hum = 0;
 int Verbose = 1;
 //char url[] =  "http://192.168.2.100/log/station101/%2.2f/%04.2f/%2.2f";
-
 
 void buttonselect();
 void bme();
@@ -121,7 +119,7 @@ void display()
             if (pres >= 1000)
                 lcd.printf("%2.2fC   %2.2fF  %4.0fhPa   %2.1f%%\n", temp, temp*9/5+32,pres,hum);
             else
-                lcd.printf("%2.2fC   %2.2fF  %4.0fhPa    %2.1f%%\n", temp, temp*9/5+32,pres,hum);
+                lcd.printf("%2.2fC   %2.2fF  %4.0fhPa   %2.1f%%\n", temp, temp*9/5+32,pres,hum);
             printf("%2.2f C, %04.2f hPa, %2.2f %%\n",sensor.getTemperature(),sensor.getPressure(),sensor.getHumidity());
             break;
         case 4 : 
@@ -153,15 +151,10 @@ void display()
 void iot()
 {
     printf("iot running\n");
-    button.rise(&buttonselect);
-    if (selectm != select)
-    {
-        printf("display changed, case: %d\n", select);
-        selectm = select;
-        ThisThread::sleep_for(BLINKING_RATE);
-    }
+    
     eth0.set_network( SocketAddress(ip), SocketAddress(mask), SocketAddress(gateway));
     eth0.connect();
+
     HttpRequest* request = new HttpRequest(&eth0, HTTP_GET, "http://192.168.2.100",NULL);
     request->set_header("Content-Type", "text/xml");
     HttpResponse* response = request->send();
@@ -169,10 +162,9 @@ void iot()
     
     // if response is NULL, check response->get_error()
 
-//causes error:
+//printf causes memory errors:
     //printf("status is %d - %s\n", response->get_status_code(), response->get_status_message().c_str());
     //printf("body is:\n%s\n", response->get_body_as_string().c_str());
     
-    delete request; // also clears out the response
+    delete request;
 }
-
