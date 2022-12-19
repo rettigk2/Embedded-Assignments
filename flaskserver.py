@@ -23,5 +23,5 @@ api.add_resource(LogReadings, "/log/<string:StationID>/<float:Sensor1>/<float:Se
 
 if __name__ == "__main__":
 
-    app.run(host="192.168.2.101", port="5000", debug=True)
+    app.run(host="192.168.2.102", port="5000", debug=True)
 
