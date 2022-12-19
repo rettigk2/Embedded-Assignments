@@ -1,14 +1,20 @@
 #include "mbed.h"
 #include "BME280_SPI.h"
 #include "TextLCD.h"
+#include "EthernetInterface.h"
+#include "SocketAddress.h"
+#include "http_request.h"
 #include <string>
 
 #define BLINKING_RATE     500ms
 
-UnbufferedSerial pc(USBTX, USBRX);
+
+EthernetInterface eth0;
+char ip[] ="192.168.2.100";
+char mask[]= "255.255.255.0";
+char gateway[] = "192.168.2.1";
 
 BME280_SPI sensor(D11, D12, D13, D9); // mosi, miso, sclk, cs
-
 I2C i2c_lcd(D14,D15); // SDA, SCL
 TextLCD_I2C_N lcd(&i2c_lcd, ST7032_SA, TextLCD_Base::LCD16x2, NC, 
 TextLCD::ST7032_3V3);
@@ -18,13 +24,13 @@ DigitalOut led(LED1);
 
 int select = 0;
 int selectm = 0; 
+int cnt = 10;
 
 string stationID("Station101");
-float Sensor1 = 0;
-float Sensor2 = 0;
-float Sensor3 = 0;
+float temp = 0;
+float pres = 0;
+float hum = 0;
 int Verbose = 1;
-
 //char url[] =  "http://192.168.2.100/log/station101/%2.2f/%04.2f/%2.2f";
 
 
@@ -56,7 +62,14 @@ int main()
         display();
         ThisThread::sleep_for(BLINKING_RATE);
         printf("main loop completed\n");
-        //iot();
+        if (cnt == 50)
+        {
+            select = 4;
+            display();
+            iot();
+            cnt = 0;
+        }
+        cnt = cnt+1;
     }
 }
 
@@ -78,13 +91,56 @@ void bme()
     }
     led = !led;
     printf("bme running\n");
-    Sensor1 = sensor.getTemperature(); //%2.2f degC
-    Sensor2 = sensor.getPressure(); //%04.2f hPA
-    Sensor3 = sensor.getHumidity(); //%2.2f %%
+    temp = sensor.getTemperature(); //%2.2f degC
+    pres = sensor.getPressure(); //%04.2f hPA
+    hum = sensor.getHumidity(); //%2.2f %%
 }
 
 void display()
 {
+    printf("display running\n");
+    lcd.locate(0, 0);
+    switch(select)
+    {
+        case 0 :
+            lcd.printf("Temperature:    %2.2fC    %2.2fF\n", temp, temp*9/5+32);//%2.2f degC  F = C * 9/5 + 32
+            printf("Temperature: %2.2f C\n", temp);
+            break;
+        case 1 : 
+            if (pres >= 1000)
+                lcd.printf("Pressure:              %04.1fhPA\n", pres); //%04.2f hPA "%2.2fC   %%04.2fhPA\nShowing Press:\n"
+            else 
+                lcd.printf("Pressure:              %04.1fhPA \n", pres); //%04.2f hPA "%2.2fC   %%04.2fhPA\nShowing Press:\n"
+            printf("Pressure: %04.2f hPA\n", pres);
+            break;
+        case 2 : 
+            lcd.printf("Humidity:                 %2.2f%%\n", hum); //%2.2f %% "%2.2fC   %  "%2.2f%%\nHumidity:\n"
+            printf("Humidity: %2.2f %%\n", hum);
+            break;
+        case 3 : 
+            if (pres >= 1000)
+                lcd.printf("%2.2fC   %2.2fF  %4.0fhPa   %2.1f%%\n", temp, temp*9/5+32,pres,hum);
+            else
+                lcd.printf("%2.2fC   %2.2fF  %4.0fhPa    %2.1f%%\n", temp, temp*9/5+32,pres,hum);
+            printf("%2.2f C, %04.2f hPa, %2.2f %%\n",sensor.getTemperature(),sensor.getPressure(),sensor.getHumidity());
+            break;
+        case 4 : 
+            if (selectm == 0)
+            {
+                lcd.locate(12, 0);
+                lcd.printf(" IoT");
+                select = selectm;
+            }
+            else
+            {
+                lcd.locate(9, 0);
+                lcd.printf("    IoT");
+                select = selectm;
+            }
+            
+            break;
+    }
+    lcd.locate(15, 0);
     button.rise(&buttonselect);
     if (selectm != select)
     {
@@ -92,32 +148,11 @@ void display()
         selectm = select;
         ThisThread::sleep_for(BLINKING_RATE);
     }
-    printf("display running\n");
-    lcd.locate(0, 0); //set cursor row 0, column 0, doesnt really work that well
-    switch(select)
-    {
-        case 0 :
-            lcd.printf("Temperature:    %2.2fC    %2.2fF\n", Sensor1, Sensor1*9/5+32);//%2.2f degC  F = C * 9/5 + 32
-            printf("Temperature: %2.2f C\n", Sensor1);
-            break;
-        case 1 : 
-            lcd.printf("Pressure:              %04.1fhPA\n", Sensor2); //%04.2f hPA "%2.2fC   %%04.2fhPA\nShowing Press:\n"
-            printf("Pressure: %04.2f hPA\n", Sensor2);
-            break;
-        case 2 : 
-            lcd.printf("Humidity:                 %2.2f%%\n", Sensor3); //%2.2f %% "%2.2fC   %  "%2.2f%%\nHumidity:\n"
-            printf("Humidity: %2.2f %%\n", Sensor3);
-            break;
-        case 3 : 
-            lcd.printf("%2.2fC   %2.2fF  %4.0fhPa   %2.1f%%\n", Sensor1, Sensor1*9/5+32,Sensor2,Sensor3);
-            printf("%2.2f C, %04.2f hPa, %2.2f %%\n",sensor.getTemperature(),sensor.getPressure(),sensor.getHumidity());
-            break;
-    }
-    lcd.locate(15, 0); //set cursor row 0, column 0
 }
 
 void iot()
 {
+    printf("iot running\n");
     button.rise(&buttonselect);
     if (selectm != select)
     {
@@ -125,5 +160,19 @@ void iot()
         selectm = select;
         ThisThread::sleep_for(BLINKING_RATE);
     }
-    printf("iot running\n");
+    eth0.set_network( SocketAddress(ip), SocketAddress(mask), SocketAddress(gateway));
+    eth0.connect();
+    HttpRequest* request = new HttpRequest(&eth0, HTTP_GET, "http://192.168.2.100",NULL);
+    request->set_header("Content-Type", "text/xml");
+    HttpResponse* response = request->send();
+    //HttpResponse* response = request->send(body, strlen(body));
+    
+    // if response is NULL, check response->get_error()
+
+//causes error:
+    //printf("status is %d - %s\n", response->get_status_code(), response->get_status_message().c_str());
+    //printf("body is:\n%s\n", response->get_body_as_string().c_str());
+    
+    delete request; // also clears out the response
 }
+
