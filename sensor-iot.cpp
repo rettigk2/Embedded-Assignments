@@ -9,7 +9,7 @@
 #define BLINKING_RATE     500ms
 
 EthernetInterface eth0;
-char ip[] ="192.168.2.100";
+char ip[] ="192.168.2.101";
 char mask[]= "255.255.255.0";
 char gateway[] = "192.168.2.1";
 
@@ -155,7 +155,7 @@ void iot()
     eth0.set_network( SocketAddress(ip), SocketAddress(mask), SocketAddress(gateway));
     eth0.connect();
 
-    HttpRequest* request = new HttpRequest(&eth0, HTTP_GET, "http://192.168.2.100",NULL);
+    HttpRequest* request = new HttpRequest(&eth0, HTTP_GET, "http://192.168.2.101",NULL);
     request->set_header("Content-Type", "text/xml");
     HttpResponse* response = request->send();
     //HttpResponse* response = request->send(body, strlen(body));
@@ -168,3 +168,4 @@ void iot()
     
     delete request;
 }
+
