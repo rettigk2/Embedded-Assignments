@@ -1,6 +1,7 @@
 #include "mbed.h"
 #include "BME280_SPI.h"
 #include "TextLCD.h"
+#include <string>
 
 #define BLINKING_RATE     500ms
 
@@ -17,10 +18,15 @@ DigitalOut led(LED1);
 
 int select = 0;
 int selectm = 0; 
-float sensout = 0;
-float temp = 0;
-float pressure = 0;
-float humi = 0;
+
+string stationID("Station101");
+float Sensor1 = 0;
+float Sensor2 = 0;
+float Sensor3 = 0;
+int Verbose = 1;
+
+//char url[] =  "http://192.168.2.100/log/station101/%2.2f/%04.2f/%2.2f";
+
 
 void buttonselect();
 void bme();
@@ -72,9 +78,9 @@ void bme()
     }
     led = !led;
     printf("bme running\n");
-    temp = sensor.getTemperature(); //%2.2f degC
-    pressure = sensor.getPressure(); //%04.2f hPA
-    humi = sensor.getHumidity(); //%2.2f %%
+    Sensor1 = sensor.getTemperature(); //%2.2f degC
+    Sensor2 = sensor.getPressure(); //%04.2f hPA
+    Sensor3 = sensor.getHumidity(); //%2.2f %%
 }
 
 void display()
@@ -91,23 +97,23 @@ void display()
     switch(select)
     {
         case 0 :
-            lcd.printf("Temperature:    %2.2fC    %2.2fF\n", temp, temp*9/5+32);//%2.2f degC  F = C * 9/5 + 32
-            printf("Temp: %2.2f C\n", temp);
+            lcd.printf("Temperature:    %2.2fC    %2.2fF\n", Sensor1, Sensor1*9/5+32);//%2.2f degC  F = C * 9/5 + 32
+            printf("Temperature: %2.2f C\n", Sensor1);
             break;
         case 1 : 
-            lcd.printf("Pressure:              %04.1fhPA\n", pressure); //%04.2f hPA "%2.2fC   %%04.2fhPA\nShowing Press:\n"
-            printf("Pressure: %04.2f hPA\n", pressure);
+            lcd.printf("Pressure:              %04.1fhPA\n", Sensor2); //%04.2f hPA "%2.2fC   %%04.2fhPA\nShowing Press:\n"
+            printf("Pressure: %04.2f hPA\n", Sensor2);
             break;
         case 2 : 
-            lcd.printf("Humidity:                 %2.2f%%\n", humi); //%2.2f %% "%2.2fC   %  "%2.2f%%\nHumidity:\n"
-            printf("Humidity: %2.2f %%\n", humi);
+            lcd.printf("Humidity:                 %2.2f%%\n", Sensor3); //%2.2f %% "%2.2fC   %  "%2.2f%%\nHumidity:\n"
+            printf("Humidity: %2.2f %%\n", Sensor3);
             break;
         case 3 : 
-            lcd.printf("%2.2fC   %2.2fF  %4.0fhPa   %2.1f%%\n", temp, temp*9/5+32,pressure,humi);
+            lcd.printf("%2.2fC   %2.2fF  %4.0fhPa   %2.1f%%\n", Sensor1, Sensor1*9/5+32,Sensor2,Sensor3);
             printf("%2.2f C, %04.2f hPa, %2.2f %%\n",sensor.getTemperature(),sensor.getPressure(),sensor.getHumidity());
             break;
     }
-    lcd.locate(1, 13); //set cursor row 0, column 0
+    lcd.locate(15, 0); //set cursor row 0, column 0
 }
 
 void iot()
@@ -120,5 +126,4 @@ void iot()
         ThisThread::sleep_for(BLINKING_RATE);
     }
     printf("iot running\n");
-     
 }
