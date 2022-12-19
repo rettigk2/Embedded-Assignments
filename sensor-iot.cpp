@@ -165,5 +165,6 @@ void iot()
     //printf("body is:\n%s\n", response->get_body_as_string().c_str());
     
     delete post_req;
+    eth0.disconnect();
 }
 
